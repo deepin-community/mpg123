@@ -25,6 +25,7 @@ override_dh_auto_configure:
 		--enable-static=no \
 		--enable-shared \
 		--enable-lfs-alias \
+		--includedir=\$${prefix}/include/$(DEB_HOST_MULTIARCH) \
 		$(CONF_$(DEB_HOST_ARCH_CPU))
 
 override_dh_auto_clean:

@@ -319,8 +319,8 @@ static void generic_load(mpg123_handle *fr, char *arg, int state)
 	}
 	else generic_sendinfo(arg);
 
-	if(htd.icy_name.fill) generic_sendstr(1, "I ICY-NAME: %s", htd.icy_name.p);
-	if(htd.icy_url.fill)  generic_sendstr(1, "I ICY-URL: %s",  htd.icy_url.p);
+	if(filept->htd.icy_name.fill) generic_sendstr(1, "I ICY-NAME: %s", filept->htd.icy_name.p);
+	if(filept->htd.icy_url.fill)  generic_sendstr(1, "I ICY-URL: %s",  filept->htd.icy_url.p);
 
 	mode = state;
 	init = 1;
@@ -408,7 +408,7 @@ int control_generic (mpg123_handle *fr)
 #endif
 	/* the command behaviour is different, so is the ID */
 	/* now also with version for command availability */
-	fprintf(outstream, "@R MPG123 (ThOr) v9\n");
+	fprintf(outstream, "@R MPG123 (ThOr) v10\n");
 #ifdef FIFO
 	if(param.fifo)
 	{
@@ -435,6 +435,10 @@ int control_generic (mpg123_handle *fr)
 	}
 #endif
 
+	// Persist over loop iterations to remember unfinished commands.
+	char buf[REMOTE_BUFFER_SIZE]; // command buffer
+	short int last_len = 0; // length of partial command in there
+
 	while (alive)
 	{
 		tv.tv_sec = 0;
@@ -451,6 +455,7 @@ int control_generic (mpg123_handle *fr)
 			if (n == 0) {
 				if (!play_frame())
 				{
+					generic_sendmsg("P 3");
 					out123_pause(ao);
 					/* When the track ended, user may want to keep it open (to seek back),
 					   so there is a decision between stopping and pausing at the end. */
@@ -509,16 +514,15 @@ int control_generic (mpg123_handle *fr)
 			short int len = 1; /* length of buffer */
 			char *cmd, *arg; /* variables for parsing, */
 			char *comstr = NULL; /* gcc thinks that this could be used uninitialited... */ 
-			char buf[REMOTE_BUFFER_SIZE];
 			short int counter;
 			char *next_comstr = buf; /* have it initialized for first command */
 
 			/* read as much as possible, maybe multiple commands */
 			/* When there is nothing to read (EOF) or even an error, it is the end */
 #ifdef WANT_WIN32_FIFO
-			len = win32_fifo_read(buf,REMOTE_BUFFER_SIZE);
+			len = win32_fifo_read(buf+last_len,REMOTE_BUFFER_SIZE-last_len);
 #else
-			len = read(control_file, buf, REMOTE_BUFFER_SIZE);
+			len = read(control_file, buf+last_len, REMOTE_BUFFER_SIZE-last_len);
 #endif
 			if(len < 1)
 			{
@@ -541,7 +545,9 @@ int control_generic (mpg123_handle *fr)
 			}
 
 			debug1("read %i bytes of commands", len);
+			len += last_len; // on top of remembered piece
 			/* one command on a line - separation by \n -> C strings in a row */
+			last_len = 0;
 			for(counter = 0; counter < len; ++counter)
 			{
 				/* line end is command end */
@@ -595,6 +601,13 @@ int control_generic (mpg123_handle *fr)
 				if(!strcasecmp(comstr, "SILENCE")) {
 					silent = 1;
 					generic_sendmsg("silence");
+					continue;
+				}
+
+				/* PROGRESS, opposite of silence */
+				if(!strcasecmp(comstr, "PROGRESS")) {
+					silent = 0;
+					generic_sendmsg("progress");
 					continue;
 				}
 
@@ -703,7 +716,8 @@ int control_generic (mpg123_handle *fr)
 					generic_sendmsg("H FORMAT: print out sampling rate in Hz and channel count");
 					generic_sendmsg("H SEQ <bass> <mid> <treble>: simple eq setting...");
 					generic_sendmsg("H PITCH <[+|-]value>: adjust playback speed (+0.01 is 1 %% faster)");
-					generic_sendmsg("H SILENCE: be silent during playback (meaning silence in text form)");
+					generic_sendmsg("H SILENCE: be silent during playback (no progress info, opposite of PROGRESS)");
+					generic_sendmsg("H PROGRESS: turn on progress display (opposite of SILENCE)");
 					generic_sendmsg("H STATE: Print auxiliary state info in several lines (just try it to see what info is there).");
 					generic_sendmsg("H TAG/T: Print all available (ID3) tag info, for ID3v2 that gives output of all collected text fields, using the ID3v2.3/4 4-character names. NOTE: ID3v2 data will be deleted on non-forward seeks.");
 					generic_sendmsg("H    The output is multiple lines, begin marked by \"@T {\", end by \"@T }\".");
@@ -737,19 +751,11 @@ int control_generic (mpg123_handle *fr)
 					/* Simple EQ: SEQ <BASS> <MID> <TREBLE>  */
 					if (!strcasecmp(cmd, "SEQ")) {
 						double b,m,t;
-						int cn;
 						if(sscanf(arg, "%lf %lf %lf", &b, &m, &t) == 3)
 						{
-							/* Consider adding mpg123_seq()... but also, on could define a nicer courve for that. */
-							if ((t >= 0) && (t <= 3))
-							for(cn=0; cn < 1; ++cn)	mpg123_eq(fr, MPG123_LEFT|MPG123_RIGHT, cn, b);
-
-							if ((m >= 0) && (m <= 3))
-							for(cn=1; cn < 2; ++cn) mpg123_eq(fr, MPG123_LEFT|MPG123_RIGHT, cn, m);
-
-							if ((b >= 0) && (b <= 3))
-							for(cn=2; cn < 32; ++cn) mpg123_eq(fr, MPG123_LEFT|MPG123_RIGHT, cn, t);
-
+							mpg123_eq_bands(fr, MPG123_LR, 0,  0, b);
+							mpg123_eq_bands(fr, MPG123_LR, 1,  1, m);
+							mpg123_eq_bands(fr, MPG123_LR, 2, 31, t);
 							generic_sendmsg("bass: %f mid: %f treble: %f", b, m, t);
 						}
 						else generic_sendmsg("E invalid arguments for SEQ: %s", arg);
@@ -889,7 +895,7 @@ int control_generic (mpg123_handle *fr)
 					if (!strcasecmp(cmd, "LP") || !strcasecmp(cmd, "LOADPAUSED")){ generic_load(fr, arg, MODE_PAUSED); continue; }
 
 					/* no command matched */
-					generic_sendstr(0, "E Unknown command: %s", cmd);
+					generic_send2str(0, "E Unknown command with arguments: %s %s", cmd, arg);
 				} /* end commands with arguments */
 				else generic_sendstr( 0, "E Unknown command or no arguments: %s"
 				,	comstr );
@@ -897,30 +903,19 @@ int control_generic (mpg123_handle *fr)
 				} /* end of single command processing */
 			} /* end of scanning the command buffer */
 
-			/*
-			   when last command had no \n... should I discard it?
-			   Ideally, I should remember the part and wait for next
-				 read() to get the rest up to a \n. But that can go
-				 to infinity. Too long commands too quickly are just
-				 bad. Cannot/Won't change that. So, discard the unfinished
-				 command and have fingers crossed that the rest of this
-				 unfinished one qualifies as "unknown". 
-			*/
+			// Last character not nulled if we did not use all command text.
 			if(buf[len-1] != 0)
 			{
-				// All that jazz because I did not reserve space for a zero.
-				char *last_command;
-				size_t last_len = len-(size_t)(next_comstr-buf);
-				last_command = malloc(last_len+1);
-				if(last_command)
+				if(next_comstr == buf && len == REMOTE_BUFFER_SIZE)
 				{
-					memcpy(last_command, next_comstr, last_len);
-					last_command[last_len] = 0;
-					generic_sendstr(0, "E Unfinished command: %s", last_command);
-					free(last_command);
+					generic_sendmsg("E Too long command, cannot parse.");
+					// Just skipping it, provoking further parsing erros, but maybe not fatal.
+				} else
+				{
+					last_len = len-(short)(next_comstr-buf);
+					mdebug("keeping %d bytes of old command", last_len);
+					memmove(buf, next_comstr, last_len);
 				}
-				else
-					generic_sendmsg("E Unfinished command: <DOOM>");
 			}
 		} /* end command reading & processing */
 	} /* end main (alive) loop */
