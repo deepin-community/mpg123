@@ -1,8 +1,8 @@
 Source: mpg123
 Section: sound
 Priority: optional
-Maintainer: Deepin Developer <deepin-dev@deepin.org>
-Uploaders: Deepin Packages Builder <packages@deepin.org>
+Maintainer: Debian Multimedia Maintainers <debian-multimedia@lists.debian.org>
+Uploaders:
  Reinhard Tartler <siretart@tauware.de>,
  Miguel A. Colón Vélez <debian.micove@gmail.com>,
  Sebastian Ramacher <sramacher@debian.org>
@@ -16,10 +16,10 @@ Build-Depends:
  libpulse-dev [!hurd-i386],
  pkg-config,
  portaudio19-dev
-Standards-Version: 4.6.0
+Standards-Version: 4.6.1
 Homepage: http://mpg123.org/
-#Vcs-Git
-#Vcs-Browser
+Vcs-Git: https://salsa.debian.org/multimedia-team/mpg123.git
+Vcs-Browser: https://salsa.debian.org/multimedia-team/mpg123
 Rules-Requires-Root: no
 
 Package: mpg123

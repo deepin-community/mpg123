@@ -9,16 +9,16 @@ dnl 2.69 at least.
 AC_PREREQ([2.69])
 
 dnl ############# Initialisation
-AC_INIT([mpg123], [1.29.2], [maintainer@mpg123.org])
+AC_INIT([mpg123], [1.31.1], [maintainer@mpg123.org])
 dnl Increment API_VERSION when the API gets changes (new functions).
 
 dnl libmpg123
-API_VERSION=46
-LIB_PATCHLEVEL=6
+API_VERSION=47
+LIB_PATCHLEVEL=0
 
 dnl libout123
 OUTAPI_VERSION=4
-OUTLIB_PATCHLEVEL=3
+OUTLIB_PATCHLEVEL=7
 
 dnl libsyn123
 SYNAPI_VERSION=1
@@ -367,36 +367,6 @@ AC_ARG_ENABLE(fifo,
               ],
               [
                 fifo="auto"
-              ]
-)
-
-AC_ARG_ENABLE(ipv6,
-              [  --enable-ipv6=[no/yes] IPv6 support (actually any protocol your libc does with getaddrinfo) ],
-              [
-                if test "x$enableval" = xyes
-                then
-                  ipv6="enabled"
-                else
-                  ipv6="disabled"
-                fi
-              ],
-              [
-                ipv6="auto"
-              ]
-)
-
-AC_ARG_ENABLE(network,
-              [  --enable-network=[no/yes] network support (http streams / webradio) ],
-              [
-                if test "x$enableval" = xyes
-                then
-                  network="enabled"
-                else
-                  network="disabled"
-                fi
-              ],
-              [
-                network="auto"
               ]
 )
 
@@ -1156,11 +1126,16 @@ dnl sensitive to largefile changes, i.e. FreeBSD always using 64 bit off_t.
 if test "x$ac_cv_sys_file_offset_bits" = x || echo "$ac_cv_sys_file_offset_bits" | $GREP  '@<:@^0-9@:>@' > /dev/null; then
 	dnl if it has non-numeric chars or is empty... ignore...
 	largefile_sensitive=no
+	BUILD_NO_LARGENAME=1
+	AC_DEFINE(BUILD_NO_LARGENAME, 1, [ No suffixed symbols for large file support (only alias for backwards compat.) ])
 else
 	largefile_sensitive=yes
+	BUILD_NO_LARGENAME=0
 fi
 # Add dual-mode wrapper code.
 AM_CONDITIONAL([HAVE_LFS_WRAP], [ test x"$largefile_sensitive" = xyes ] )
+# Any non-sensitive platform does not bother with off_t-based function renaming.
+AC_SUBST(BUILD_NO_LARGENAME)
 
 # Using the lower level macros instead of AC_TYPE_* for compatibility with not freshest autoconf.
 AC_CHECK_TYPE(size_t, unsigned long)
@@ -1241,12 +1216,27 @@ fi
 
 # Check if system supports termios
 AC_SYS_POSIX_TERMIOS
+
+AC_MSG_CHECKING([if we have wincon.h])
+AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+#include <windows.h>
+#include <wincon.h>
+void *v = &ReadConsoleInput;
+])],[ac_cv_header_wincon_h=yes],[ac_cv_header_wincon_h=no])
+AC_MSG_RESULT([$ac_cv_header_wincon_h])
+AS_IF([test "x$ac_cv_header_wincon_h" = "xyes"],[],[AC_DEFINE([HAVE_WINCON_H],[1],[Define to 1 if you have the <wincon.h> header file.])])
+
+term_type=none
 if test "x$ac_cv_sys_posix_termios" = "xyes"; then
   AC_DEFINE_UNQUOTED([HAVE_TERMIOS], 1, 
   [Define this if you have the POSIX termios library])
+  term_type=posix
+elif test "x$ac_cv_header_windows_h" = "xyes" &&
+     test "x$ac_cv_header_wincon_h"  = "xyes"; then
+  term_type=win32
 fi
 
-AC_CHECK_FUNCS( random )
+AC_CHECK_FUNCS( random setenv unsetenv )
 
 # Check for sched_setscheduler
 AC_CHECK_FUNCS( sched_setscheduler setuid getuid)
@@ -1262,12 +1252,45 @@ AC_CHECK_FUNCS( atoll )
 
 AC_CHECK_FUNCS( mkfifo, [ have_mkfifo=yes ], [ have_mkfifo=no ] )
 
+AC_CHECK_FUNCS( fork execvp, [ have_fork=yes ], [have_fork=no; break] )
+
+AC_CHECK_FUNCS( ctermid )
+
+dnl For Windows and OS/2.
+dnl Checking for both the functions as well as the flag symbols.
+dnl Taking care with _setmode() being preferred on Windows, and
+dnl OS/2 providing _setmode, but not the underscored flags.
+#AC_CHECK_FUNCS( _setmode setmode )
+AC_LINK_IFELSE( [AC_LANG_SOURCE(
+#include <io.h>
+#include <fcntl.h>
+#include <stdio.h>
+
+int main()
+{
+  _setmode(STDIN_FILENO, _O_BINARY);
+  _setmode(STDOUT_FILENO, _O_TEXT);
+  return 0;
+} )], [AC_DEFINE( HAVE__SETMODE, 1, [for Win/DOS system with _setmode()] )], [] )
+
+AC_LINK_IFELSE( [AC_LANG_SOURCE(
+#include <io.h>
+#include <fcntl.h>
+#include <stdio.h>
+
+int main()
+{
+  setmode(STDIN_FILENO, O_BINARY);
+  setmode(STDOUT_FILENO, O_TEXT);
+  return 0;
+} )], [AC_DEFINE( HAVE_SETMODE, 1, [for Win/DOS system with setmode()] )], [] )
+
 dnl ############## Header and Library Checks
 
 # locale headers
 AC_CHECK_HEADERS([locale.h langinfo.h wchar.h wctype.h])
 # Headers for network (http) stuff
-network_type=Unknown
+network_internal=unknown
 AC_CHECK_HEADERS([netdb.h sys/param.h sys/socket.h netinet/in.h arpa/inet.h])
 if test "x$ac_cv_header_netdb_h" = "xyes"      &&
    test "x$ac_cv_header_sys_param_h" = "xyes"  &&
@@ -1275,7 +1298,7 @@ if test "x$ac_cv_header_netdb_h" = "xyes"      &&
    test "x$ac_cv_header_netinet_in_h" = "xyes" &&
    test "x$ac_cv_header_arpa_inet_h"  = "xyes"; then
   have_network=yes
-  network_type=Posix
+  network_internal=posix
 else
   have_network=no
 fi
@@ -1286,13 +1309,6 @@ dnl OK, two lines... Solaris needs -lnsl -lsocket
 AC_SEARCH_LIBS(socket, socket) 
 
 AC_CHECK_FUNCS( getaddrinfo, [ have_ipv6=yes ], [ have_ipv6=no ] )
-
-# A Hack for MSVC builds by cmake: Disable largefile hackery.
-# Maybe one time we support hat wretched environment directly, but
-# for now configure lives in a world where large file support is
-# properly defined and served by off_t.
-BUILD_NO_LARGENAME=0
-AC_SUBST(BUILD_NO_LARGENAME)
 
 # Substitutions for the installable mpg123.h header
 if test "x$ac_cv_header_stdio_h" = "xyes"; then
@@ -1342,10 +1358,9 @@ ADD_CPPFLAGS="$sys_cppflags"
 ADD_LDFLAGS=""
 LIBS="$LIBS"
 
-# Consider moving that stuff.
-AC_CHECK_HEADER([os2.h], [ADD_CPPFLAGS="$ADD_CPPFLAGS -DOS2"])
-# On OS/2, we need to link to os2term to make terminal control actually work.
-AC_CHECK_LIB([os2term], [tcsetattr], [ADD_LDFLAGS="$ADD_LDFLAGS -los2term"])
+# Remove that if it is settled that tcsetattr on OS/2 is unsalvageable anyway.
+# The only user of os2.h is the output module.
+AC_CHECK_HEADERS([os2.h])
 
 # If debugging is enabled, just enable debugging symbols.
 # All other stuff enters nagging territory.
@@ -1675,7 +1690,10 @@ output_modules=
 check_forced=no
 check_failed=no
 if test "x$with_audio" != "x"; then
-	check_modules="`echo $with_audio|tr , ' '` dummy"
+	check_modules=`echo $with_audio|tr , ' '`
+	if ! echo "$check_modules" | grep -qw dummy; then
+		check_modules="$check_modules dummy"
+	fi
 	echo "Limiting outputs to build according to your preference: $check_modules"
 	check_forced=yes
 fi
@@ -1878,15 +1896,7 @@ int main(){
 			fi
 		;;
 		sndio)
-			SNDIO_LIBS=-lsndio
-			AC_CHECK_LIB([sndio], [sio_open],
-				[AC_CHECK_HEADERS([sndio.h],
-					[output_modules="$output_modules sndio" HAVE_SNDIO="yes"])
-				]
-			)
-			if test "x$HAVE_SNDIO" != xyes; then
-				check_failed=yes
-			fi
+			PKG_CHECK_MODULES(SNDIO, sndio, output_modules="$output_modules sndio" HAVE_SNDIO="yes", HAVE_SNDIO="no" check_failed=yes)
 		;;
 		sun)
 			AC_CHECK_HEADERS([sun/audioio.h sys/audioio.h asm/audioio.h sys/audio.h])
@@ -1968,6 +1978,9 @@ int main(){
 		;;
 		os2)
 			OS2_LIBS="-lcx -lmmpm2"
+			OS2_CFLAGS="-idirafter /@unixroot/usr/include/os2tk45"
+			oldcflags="$CFLAGS"
+			CFLAGS="$CFLAGS $OS2_CFLAGS"
 			AC_CHECK_HEADERS([os2.h])
 			# os2me.h depends on os2.h
 			# Yes, that way of coding it is ugly.
@@ -1976,6 +1989,7 @@ int main(){
 				# We mimick exactly the way how the header will be used.
 				# It seems to be picky...
 				AC_CHECK_HEADERS([os2me.h], [], [], [#define INCL_OS2MM
+#undef VERSION
 #define INCL_DOS
 #define INCL_VIO
 #define INCL_KBD
@@ -1990,6 +2004,7 @@ int main(){
 			else
 				check_failed=yes
 			fi
+			CFLAGS="$oldcflags"
 		;;
 # from here on only forced tests, untested code
 		hp)
@@ -2186,6 +2201,15 @@ fi
 
 default_output_module=`first_word $default_output_modules`
 
+# Without actual modules, there is only the builtin one.
+if test x"$modules" = xdisabled; then
+  # Module-less build needs _some_ default module.
+  if test -z "$default_output_module"; then
+    default_output_module=dummy
+  fi
+  default_output_modules=$default_output_module
+fi
+
 # Setup the static build.
 # The conditionals always need to be defined by configure, even if
 # HAVE_MODULES is FALSE!
@@ -2193,39 +2217,35 @@ default_output_module=`first_word $default_output_modules`
 #for i in dummy tinyalsa alsa qsa coreaudio esd jack nas oss portaudio pulse sdl sndio sun win32 win32_wasapi aix alib arts hp os2 sgi mint openal
 #do echo $i; done |
 #perl -ne 'chomp; $big = uc($_); print <<EOT;
-#AM_CONDITIONAL([BUILD_${big}], [ test "$_" = \$default_output_module ])
+#AM_CONDITIONAL([BUILD_${big}], [ test "$_" = "\$default_output_module" ])
 #EOT
 #'
 
-AM_CONDITIONAL([BUILD_DUMMY], [ test "dummy" = $default_output_module ])
-AM_CONDITIONAL([BUILD_TINYALSA], [ test "tinyalsa" = $default_output_module ])
-AM_CONDITIONAL([BUILD_ALSA], [ test "alsa" = $default_output_module ])
-AM_CONDITIONAL([BUILD_QSA], [ test "qsa" = $default_output_module ])
-AM_CONDITIONAL([BUILD_COREAUDIO], [ test "coreaudio" = $default_output_module ])
-AM_CONDITIONAL([BUILD_ESD], [ test "esd" = $default_output_module ])
-AM_CONDITIONAL([BUILD_JACK], [ test "jack" = $default_output_module ])
-AM_CONDITIONAL([BUILD_NAS], [ test "nas" = $default_output_module ])
-AM_CONDITIONAL([BUILD_OSS], [ test "oss" = $default_output_module ])
-AM_CONDITIONAL([BUILD_PORTAUDIO], [ test "portaudio" = $default_output_module ])
-AM_CONDITIONAL([BUILD_PULSE], [ test "pulse" = $default_output_module ])
-AM_CONDITIONAL([BUILD_SDL], [ test "sdl" = $default_output_module ])
-AM_CONDITIONAL([BUILD_SNDIO], [ test "sndio" = $default_output_module ])
-AM_CONDITIONAL([BUILD_SUN], [ test "sun" = $default_output_module ])
-AM_CONDITIONAL([BUILD_WIN32], [ test "win32" = $default_output_module ])
-AM_CONDITIONAL([BUILD_WIN32_WASAPI], [ test "win32_wasapi" = $default_output_module ])
-AM_CONDITIONAL([BUILD_AIX], [ test "aix" = $default_output_module ])
-AM_CONDITIONAL([BUILD_ALIB], [ test "alib" = $default_output_module ])
-AM_CONDITIONAL([BUILD_ARTS], [ test "arts" = $default_output_module ])
-AM_CONDITIONAL([BUILD_HP], [ test "hp" = $default_output_module ])
-AM_CONDITIONAL([BUILD_OS2], [ test "os2" = $default_output_module ])
-AM_CONDITIONAL([BUILD_SGI], [ test "sgi" = $default_output_module ])
-AM_CONDITIONAL([BUILD_MINT], [ test "mint" = $default_output_module ])
-AM_CONDITIONAL([BUILD_OPENAL], [ test "openal" = $default_output_module ])
+AM_CONDITIONAL([BUILD_DUMMY], [ test "dummy" = "$default_output_module" ])
+AM_CONDITIONAL([BUILD_TINYALSA], [ test "tinyalsa" = "$default_output_module" ])
+AM_CONDITIONAL([BUILD_ALSA], [ test "alsa" = "$default_output_module" ])
+AM_CONDITIONAL([BUILD_QSA], [ test "qsa" = "$default_output_module" ])
+AM_CONDITIONAL([BUILD_COREAUDIO], [ test "coreaudio" = "$default_output_module" ])
+AM_CONDITIONAL([BUILD_ESD], [ test "esd" = "$default_output_module" ])
+AM_CONDITIONAL([BUILD_JACK], [ test "jack" = "$default_output_module" ])
+AM_CONDITIONAL([BUILD_NAS], [ test "nas" = "$default_output_module" ])
+AM_CONDITIONAL([BUILD_OSS], [ test "oss" = "$default_output_module" ])
+AM_CONDITIONAL([BUILD_PORTAUDIO], [ test "portaudio" = "$default_output_module" ])
+AM_CONDITIONAL([BUILD_PULSE], [ test "pulse" = "$default_output_module" ])
+AM_CONDITIONAL([BUILD_SDL], [ test "sdl" = "$default_output_module" ])
+AM_CONDITIONAL([BUILD_SNDIO], [ test "sndio" = "$default_output_module" ])
+AM_CONDITIONAL([BUILD_SUN], [ test "sun" = "$default_output_module" ])
+AM_CONDITIONAL([BUILD_WIN32], [ test "win32" = "$default_output_module" ])
+AM_CONDITIONAL([BUILD_WIN32_WASAPI], [ test "win32_wasapi" = "$default_output_module" ])
+AM_CONDITIONAL([BUILD_AIX], [ test "aix" = "$default_output_module" ])
+AM_CONDITIONAL([BUILD_ALIB], [ test "alib" = "$default_output_module" ])
+AM_CONDITIONAL([BUILD_ARTS], [ test "arts" = "$default_output_module" ])
+AM_CONDITIONAL([BUILD_HP], [ test "hp" = "$default_output_module" ])
+AM_CONDITIONAL([BUILD_OS2], [ test "os2" = "$default_output_module" ])
+AM_CONDITIONAL([BUILD_SGI], [ test "sgi" = "$default_output_module" ])
+AM_CONDITIONAL([BUILD_MINT], [ test "mint" = "$default_output_module" ])
+AM_CONDITIONAL([BUILD_OPENAL], [ test "openal" = "$default_output_module" ])
 
-# Without actual modules, there is only the builtin one.
-if test x"$modules" = xdisabled; then
-  default_output_modules=$default_output_module
-fi
 default_modstring=`echo "$default_output_modules"|tr ' ' ,`
 AC_DEFINE_UNQUOTED( DEFAULT_OUTPUT_MODULE, "$default_modstring", [The default audio output module(s) to use] )
 
@@ -2305,20 +2325,13 @@ AC_DEFINE_UNQUOTED(INDEX_SIZE, $seektable, [size of the frame index seek table])
 
 dnl ############## Win32 function checks
 # Check if we want Unicode for Win32. Cygwin and Midipix does not need _wopen
-if test "x$ac_cv_header_windows_h" = xyes &&
-   test "x$host_os" != xcygwin &&
-   test "x$host_os" != xmidipix; then
-  win32_specific_codes=enabled
-else
-  win32_specific_codes=disabled
-fi
+COMPAT_LIBS=
+
 win32_unicode=unneeded
 win32_sockets=disabled
 win32_sockets_working=no
 win32_wide_working=no
 win32_winver_bump=no
-
-COMPAT_LIBS=
 
 ### mingw.org may not work properly for newer APIs
 case $host_os in
@@ -2330,6 +2343,11 @@ case $host_os in
     ])
   ;;
 esac
+
+# enable win32 code
+if test "x$ac_cv_header_windows_h" = xyes -a "x$host_os" != xcygwin -a "x$host_os" != xmidipix; then
+  win32_specific_codes=enabled
+fi
 
 dnl We do not support non-unicode Windows.
 if test "x$win32_specific_codes" = xenabled; then
@@ -2390,7 +2408,7 @@ if test "x$win32_specific_codes" = xenabled; then
 #### Check for Network functions
   AC_CHECK_HEADERS([ws2tcpip.h], [win32_sockets=enabled], [AC_MSG_WARN([Please update your headers to support winsock 2.2.])])
   AC_MSG_CHECKING([if we want Win32 sockets])
-  if test "x$win32_sockets" = "xenabled" && test "x$network" != "xdisabled"; then
+  if test "x$win32_sockets" = "xenabled"; then
   AC_MSG_RESULT([yes])
   AC_MSG_CHECKING([if winsock2 API is available])
     wsoldlibs="$LIBS"
@@ -2424,14 +2442,13 @@ if test "x$win32_specific_codes" = xenabled; then
     fi
     if test "x$win32_sockets_working" = "xyes"; then
       AC_MSG_RESULT([yes])
-      AC_DEFINE([WANT_WIN32_SOCKETS], [1], [ Define to use Win32 sockets ])
-      network_type=Winsock2
+      network_internal=winsock2
       have_network=yes
       have_ipv6=yes
     else
-      LIBS="$wsoldlibs"
       AC_MSG_WARN([Please update your headers to support winsock 2.2.])
     fi
+      LIBS="$wsoldlibs"
   else
     AC_MSG_RESULT([no])
   fi
@@ -2522,23 +2539,160 @@ int i = (EOVERFLOW) + 0;
 AC_MSG_RESULT([$eoverflow_present])
 AS_IF([test "x$eoverflow_present" = "xyes"],[],[AC_DEFINE([EOVERFLOW],[EFBIG],[Use EFBIG as substitude for EOVERFLOW, mingw.org may lack the latter])])
 
+# old network choice
+
+AC_ARG_ENABLE(ipv6,
+              [  --enable-ipv6=[no/yes] IPv6 support in internal network stack ],
+              [
+                if test "x$enableval" = xyes
+                then
+                  ipv6="enabled"
+                else
+                  ipv6="disabled"
+                fi
+              ],
+              [
+                ipv6="auto"
+              ]
+)
+
+dnl make it clear that auto is the default for both enable and with options.
+network_type=auto
+
+dnl This is to be kept in sync with --with-network, it is a shortcut that
+dnl keep the old semantics of being able to --disable-network support altogether.
+dnl The default should match the --with-network default.
+AC_ARG_ENABLE(network,
+              [  --enable-network=[no/yes] network support (http streams / webradio), if available (overruled by --with-network!) ],
+              [
+                if test "x$enableval" = xyes
+                then
+                  network_type=auto
+                else
+                  network_type=disabled
+                fi
+              ],
+              [
+              ]
+)
+
+# new network choice
+
+AC_MSG_CHECKING([for preferred network support])
+AC_ARG_WITH([network],
+  [AS_HELP_STRING([--with-network=<type>],
+[Available options, depending on platform, are auto, none, internal, winhttp, wininet (or wininethttp for both), and exec (wget or curl binaries).
+The internal code is always built in addition to external options for plain HTTP (esp. Shoutcast v1) support.
+The external option is for HTTPS by default, but can be used for HTTP, too.])],
+  [
+    case "$withval" in
+      exec)
+        network_type="exec"
+        AC_MSG_RESULT([exec])
+        ;;
+      winhttp)
+        network_type="winhttp"
+        AC_MSG_RESULT([winhttp])
+        ;;
+      wininet)
+        network_type="wininet"
+        AC_MSG_RESULT([wininet])
+        ;;
+      wininethttp)
+        network_type="wininethttp"
+        AC_MSG_RESULT([wininethttp])
+        ;;
+      internal)
+        network_type="internal"
+        AC_MSG_RESULT([internal])
+        ;;
+      yes|auto)
+        network_type="auto"
+        AC_MSG_RESULT([auto])
+        ;;
+      no|none)
+        network_type="disabled"
+        AC_MSG_RESULT([none])
+        ;;
+      *)
+        AC_MSG_ERROR([Unknown network option "$withval"])
+        ;;
+     esac
+  ],
+  [
+    AC_MSG_RESULT([$network_type])
+  ]
+)
+
+if test x$network_type = xauto; then
+  AC_MSG_CHECKING([for automatic network support])
+  if test "x$have_fork" = "xyes"; then
+    network_type=exec
+  elif test "x$win32_specific_codes" = "xenabled"; then
+    network_type=wininethttp
+  elif test "x$have_network" = "xyes"; then
+    network_type="internal"
+  else
+    network_type="disabled"
+  fi
+  AC_MSG_RESULT([$network_type])
+fi
+
+# new net123
+if test x$network_type != xinternal -a x$network_type != xdisabled; then
+  AC_DEFINE([NET123], [1], [ Define to for new net123 network stack. ])
+fi
+if test x$network_type = xexec -a x$have_fork != xyes; then
+  AC_MSG_ERROR([exec network support selected but fork not available])
+fi
+if test x$network_type = xwininet -o x$network_type = xwinhttp -o x$network_type = xwininethttp && test x$win32_specific_codes != xenabled; then
+  AC_MSG_ERROR([wininet or winhttp is currently only for Windows])
+fi
+
 #### Use Win32 support codes
 AM_CONDITIONAL([WIN32_CODES], [ test "x$win32_specific_codes" = xenabled ])
 
-if test x"$network" = xauto; then
-	if test x"$have_network" = xyes; then
-		network=enabled
-	else
-		network=disabled
-	fi
-fi
 if test x"$ipv6" = xauto; then
-	if test x"$have_ipv6" = xyes; then
+	AC_MSG_CHECKING([IPv6 use])
+	if test x"$have_ipv6" = xyes -a x"$network_type" != xdisabled; then
 		ipv6=enabled
 	else
 		ipv6=disabled
 	fi
+	AC_MSG_RESULT([$ipv6])
 fi
+
+if test x$network_type != xdisabled -a x$network_internal = xwinsock2; then
+  AC_DEFINE([WANT_WIN32_SOCKETS], [1], [ Define to use Win32 sockets ])
+fi
+
+AM_CONDITIONAL([NETWORK_WINSOCK], [ test x$network_type != xdisabled -a x$network_internal = xwinsock2 ])
+AM_CONDITIONAL([NET123], [ test x$network_type != xdisabled ])
+AM_CONDITIONAL([NET123_EXEC], [ test x$network_type = xexec ])
+AM_CONDITIONAL([NET123_WINHTTP], [ test x$network_type = xwinhttp || test x$network_type = xwininethttp ])
+AM_CONDITIONAL([NET123_WININET], [ test x$network_type = xwininet || test x$network_type = xwininethttp ])
+
+case "$network_type" in
+  exec)
+    AC_DEFINE(NET123_EXEC,    1, [ Define for executable-based networking (for HTTPS). ])
+  ;;
+  winhttp)
+    AC_DEFINE(NET123_WINHTTP, 1, [ Define for winhttp networking (for HTTPS). ])
+  ;;
+  wininet)
+    AC_DEFINE(NET123_WININET, 1, [ Define for wininet networking (for HTTPS). ])
+  ;;
+  wininethttp)
+    AC_DEFINE(NET123_WININET, 1, [ Define for wininet networking (for HTTPS). ])
+    AC_DEFINE(NET123_WINHTTP, 1, [ Define for winhttp networking (for HTTPS). ])
+  ;;
+esac
+
+dnl ############## Terminal choice
+
+AM_CONDITIONAL( [TERM_POSIX], [test "x$term_type" = xposix] )
+AM_CONDITIONAL( [TERM_NONE], [test "x$term_type" = xnone] )
+AM_CONDITIONAL( [TERM_WIN32], [test "x$term_type" = xwin32] )
 
 dnl ############## FIFO enable
 
@@ -2558,7 +2712,7 @@ if test x"$fifo" = xenabled; then
 fi
 
 dnl ############## Network enable
-if test x"$network" = xenabled; then
+if test x"$network_type" != xdisabled; then
 	AC_DEFINE(NETWORK, 1, [ Define if network support is enabled. ])
 	if test x"$have_network" = xno; then
 		AC_MSG_WARN( [ You forced network code while I think there is support missing! ] )
@@ -2601,8 +2755,6 @@ AC_CONFIG_FILES([
 
 AC_OUTPUT
 
-
-
 dnl ############## Display Message
 
 echo "
@@ -2613,13 +2765,18 @@ echo "
   Compiler Optimization ... $with_optimization
   Gapless Support ......... $gapless
   Debugging ............... $debugging
+  Terminal control ........ $term_type
   Extreme debugging ....... $xdebugging
   Seek table size ......... $seektable
   FIFO support ............ $fifo
-  Buffer .................. $buffer
-  Network (http streams) .. $network
-  Network Sockets ......... $network_type
+  Buffer .................. $buffer"
+if test x$network_type != xdisabled; then
+  if test x$network_type != xinternal; then
+    echo "  External network ........ $network_type"
+  fi
+  echo "  Internal network type ... $network_internal
   IPv6 (getaddrinfo) ...... $ipv6"
+fi
 if test x"$LARGEFILE_BITS" = x; then
   echo "  File offsets ............ default"
 else

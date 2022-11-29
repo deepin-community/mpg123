@@ -20,6 +20,8 @@ libmpg123.so.0 libmpg123-0 #MINVER#
  mpg123_encsize@Base 1.13.7
  mpg123_eq2@Base 1.28.0
  mpg123_eq@Base 1.6.2
+ mpg123_eq_bands@Base 1.30.0
+ mpg123_eq_change@Base 1.30.0
  mpg123_errcode@Base 1.6.2
  mpg123_exit@Base 1.6.2
  mpg123_feature2@Base 1.26.0
@@ -136,4 +138,5 @@ libmpg123.so.0 libmpg123-0 #MINVER#
  mpg123_tpf@Base 1.6.2
  mpg123_volume@Base 1.6.2
  mpg123_volume_change@Base 1.6.2
+ mpg123_volume_change_db@Base 1.30.0
 (arch-bits=32|arch=!kfreebsd-any !x32)#include "libmpg123-0.symbols.32bit.in"
