@@ -14,9 +14,9 @@ Build-Depends:
  libltdl-dev,
  libopenal-dev,
  libpulse-dev [!hurd-i386],
- pkg-config,
+ pkgconf,
  portaudio19-dev
-Standards-Version: 4.6.1
+Standards-Version: 4.6.2
 Homepage: http://mpg123.org/
 Vcs-Git: https://salsa.debian.org/multimedia-team/mpg123.git
 Vcs-Browser: https://salsa.debian.org/multimedia-team/mpg123

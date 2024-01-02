@@ -4,6 +4,7 @@ libout123.so.0 libout123-0 #MINVER#
  out123_continue@Base 1.23.8
  out123_del@Base 1.23.8
  out123_devices@Base 1.28.0
+ out123_distversion@Base 1.32.3
  out123_drain@Base 1.23.8
  out123_driver_info@Base 1.23.8
  out123_drivers@Base 1.23.8
@@ -20,6 +21,7 @@ libout123.so.0 libout123-0 #MINVER#
  out123_getformat@Base 1.23.8
  out123_getparam2@Base 1.28.0
  out123_getparam@Base 1.23.8
+ out123_libversion@Base 1.32.3
  out123_ndrain@Base 1.23.8
  out123_new@Base 1.23.8
  out123_open@Base 1.23.8
