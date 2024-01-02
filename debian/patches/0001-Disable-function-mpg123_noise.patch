@@ -1,0 +1,45 @@
+From: Daniel Kobras <kobras@debian.org>
+Date: Sun, 1 Oct 2023 11:44:38 +0200
+Subject: Disable function mpg123_noise
+
+This function is not yet part of libmpg123's official API and should
+therefore not get exported.
+---
+ src/libmpg123/dither.h      | 2 ++
+ src/libmpg123/dither_impl.h | 2 ++
+ 2 files changed, 4 insertions(+)
+
+diff --git a/src/libmpg123/dither.h b/src/libmpg123/dither.h
+index e1fa4ab..dad6d63 100644
+--- a/src/libmpg123/dither.h
++++ b/src/libmpg123/dither.h
+@@ -17,7 +17,9 @@ enum mpg123_noise_type
+ 	,mpg123_highpass_tpdf_noise
+ };
+ 
++#if 0
+ void mpg123_noise(float* table, size_t count, enum mpg123_noise_type noisetype);
++#endif
+ void INT123_dither_table_init(float *dithertable);
+ 
+ #endif
+diff --git a/src/libmpg123/dither_impl.h b/src/libmpg123/dither_impl.h
+index 87eaad6..a2c5a5a 100644
+--- a/src/libmpg123/dither_impl.h
++++ b/src/libmpg123/dither_impl.h
+@@ -100,6 +100,7 @@ static void highpass_tpdf_noise(float *table, size_t count)
+ 	}
+ }
+ 
++#if 0
+ void mpg123_noise(float* table, size_t count, enum mpg123_noise_type noisetype)
+ {
+ 	switch(noisetype)
+@@ -111,6 +112,7 @@ void mpg123_noise(float* table, size_t count, enum mpg123_noise_type noisetype)
+ 		break;
+ 	}
+ }
++#endif
+ 
+ /* Generate white noise and shape it with a high pass filter. */
+ void INT123_dither_table_init(float *dithertable)

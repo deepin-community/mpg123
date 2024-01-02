@@ -6,6 +6,7 @@ libsyn123.so.0 libsyn123-0 #MINVER#
  syn123_db2lin@Base 1.26.0
  syn123_deinterleave@Base 1.26.0
  syn123_del@Base 1.26.0
+ syn123_distversion@Base 1.32.3
  syn123_dither@Base 1.26.0
  syn123_drop_filter@Base 1.26.0
  syn123_filter@Base 1.26.0
@@ -13,6 +14,7 @@ libsyn123.so.0 libsyn123-0 #MINVER#
  syn123_host2le@Base 1.26.0
  syn123_interleave@Base 1.26.0
  syn123_le2host@Base 1.26.0
+ syn123_libversion@Base 1.32.3
  syn123_lin2db@Base 1.26.0
  syn123_mix@Base 1.26.0
  syn123_mixenc@Base 1.26.0
@@ -26,15 +28,19 @@ libsyn123.so.0 libsyn123-0 #MINVER#
  syn123_resample_expect@Base 1.26.0
  syn123_resample_fillcount@Base 1.26.0
  syn123_resample_history@Base 1.26.0
+ syn123_resample_in@Base 1.32.3
  syn123_resample_incount@Base 1.26.0
  syn123_resample_inexpect@Base 1.26.0
+ syn123_resample_intotal64@Base 1.32.3
  syn123_resample_intotal@Base 1.26.2
- syn123_resample_intotal_32@Base 1.26.2
+ (arch-bits=32|arch=!x32)syn123_resample_intotal_32@Base 1.26.2
  syn123_resample_intotal_64@Base 1.26.0
  syn123_resample_maxincount@Base 1.26.0
  syn123_resample_maxrate@Base 1.26.0
+ syn123_resample_out@Base 1.32.3
+ syn123_resample_total64@Base 1.32.3
  syn123_resample_total@Base 1.26.2
- syn123_resample_total_32@Base 1.26.2
+ (arch-bits=32|arch=!x32)syn123_resample_total_32@Base 1.26.2
  syn123_resample_total_64@Base 1.26.0
  syn123_setup_filter@Base 1.26.0
  syn123_setup_geiger@Base 1.26.0
