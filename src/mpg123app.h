@@ -22,7 +22,7 @@
 #endif
 
 /* everyone needs it */
-#include "compat.h"
+#include "compat/compat.h"
 /* import DLL symbols on windows */
 
 #include "httpget.h"
@@ -148,7 +148,7 @@ extern int playlimit;
 #endif
 
 /* why extern? */
-void play_prebuffer();
+void play_prebuffer(void);
 extern int play_frame(void);
 
 extern int control_generic(mpg123_handle *fr);

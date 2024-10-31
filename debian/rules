@@ -13,7 +13,9 @@ ifneq ($(DEB_HOST_ARCH_OS),hurd)
 endif
 
 CONF_i386:=--with-cpu=x86_dither
-CONF_arm:=--with-cpu=generic_fpu
+CONF_armel:=--with-cpu=arm_nofpu
+CONF_armhf:=--with-cpu=arm_fpu
+CONF_arm64:=--with-cpu=aarch64
 
 mpg123-%: debian/mpg123-wrapper.in
 	dh_testdir
@@ -26,7 +28,7 @@ override_dh_auto_configure:
 		--enable-shared \
 		--enable-lfs-alias \
 		--includedir=\$${prefix}/include/$(DEB_HOST_MULTIARCH) \
-		$(CONF_$(DEB_HOST_ARCH_CPU))
+		$(CONF_$(DEB_HOST_ARCH))
 
 override_dh_auto_clean:
 	dh_auto_clean
