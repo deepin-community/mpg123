@@ -1,4 +1,4 @@
-libsyn123.so.0 libsyn123-0 #MINVER#
+libsyn123.so.0 libsyn123-0t64 #MINVER#
  syn123_amp@Base 1.26.0
  syn123_be2host@Base 1.26.0
  syn123_clip@Base 1.26.0
@@ -32,15 +32,15 @@ libsyn123.so.0 libsyn123-0 #MINVER#
  syn123_resample_incount@Base 1.26.0
  syn123_resample_inexpect@Base 1.26.0
  syn123_resample_intotal64@Base 1.32.3
- syn123_resample_intotal@Base 1.26.2
- (arch-bits=32|arch=!x32)syn123_resample_intotal_32@Base 1.26.2
+ (arch=!armel !armhf !hppa !mipsel !powerpc !m68k !sh4 !x32)syn123_resample_intotal@Base 1.26.2
+ (arch=i386 hurd-i386)syn123_resample_intotal_32@Base 1.26.2
  syn123_resample_intotal_64@Base 1.26.0
  syn123_resample_maxincount@Base 1.26.0
  syn123_resample_maxrate@Base 1.26.0
  syn123_resample_out@Base 1.32.3
  syn123_resample_total64@Base 1.32.3
- syn123_resample_total@Base 1.26.2
- (arch-bits=32|arch=!x32)syn123_resample_total_32@Base 1.26.2
+ (arch=!armel !armhf !hppa !mipsel !powerpc !m68k !sh4 !x32)syn123_resample_total@Base 1.26.2
+ (arch=i386 hurd-i386)syn123_resample_total_32@Base 1.26.2
  syn123_resample_total_64@Base 1.26.0
  syn123_setup_filter@Base 1.26.0
  syn123_setup_geiger@Base 1.26.0

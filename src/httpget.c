@@ -34,12 +34,12 @@
 #include "resolver.h"
 
 #include <errno.h>
-#include "true.h"
+#include "common/true.h"
 #endif
 
 #include <ctype.h>
 
-#include "debug.h"
+#include "common/debug.h"
 
 void httpdata_init(struct httpdata *e)
 {
@@ -291,7 +291,7 @@ int translate_url(const char *url, mpg123_string *purl)
 	 * 2000-10-21:
 	 * We would like spaces to be automatically converted to %20's when
 	 * fetching via HTTP.
-	 * -- Martin Sjögren <md9ms@mdstud.chalmers.se>
+	 * -- Martin Sjoegren <md9ms@mdstud.chalmers.se>
 	 * Hm, why only spaces? Maybe one should do this http stuff more properly...
 	 */
 	if ((sptr = strchr(url, ' ')) == NULL)
