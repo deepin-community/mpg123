@@ -43,10 +43,7 @@ Description: MPEG layer 1/2/3 audio player
  OSS4, the Advanced Linux Sound Architecture (ALSA), JACK, PortAudio,
  PulseAudio, OpenAL and the Network Audio System (NAS).
 
-Package: libmpg123-0t64
-Provides: ${t64:Provides}
-Replaces: libmpg123-0
-Breaks: libmpg123-0 (<< ${source:Version})
+Package: libmpg123-0
 Multi-Arch: same
 Architecture: any
 Section: libs
@@ -60,10 +57,7 @@ Description: MPEG layer 1/2/3 audio decoder (shared library)
  This package contains the C libraries needed to run executables that use
  the mpg123 library.
 
-Package: libout123-0t64
-Provides: ${t64:Provides}
-Replaces: libout123-0
-Breaks: libout123-0 (<< ${source:Version})
+Package: libout123-0
 Multi-Arch: same
 Architecture: any
 Section: libs
@@ -76,10 +70,7 @@ Description: MPEG layer 1/2/3 audio decoder (libout123 shared library)
  .
  This package contains the shared out123 library.
 
-Package: libsyn123-0t64
-Provides: ${t64:Provides}
-Replaces: libsyn123-0
-Breaks: libsyn123-0 (<< ${source:Version})
+Package: libsyn123-0
 Multi-Arch: same
 Architecture: any
 Section: libs
@@ -97,9 +88,9 @@ Multi-Arch: same
 Architecture: any
 Section: libdevel
 Depends:
- libmpg123-0t64 (= ${binary:Version}),
- libout123-0t64 (= ${binary:Version}),
- libsyn123-0t64 (= ${binary:Version}),
+ libmpg123-0 (= ${binary:Version}),
+ libout123-0 (= ${binary:Version}),
+ libsyn123-0 (= ${binary:Version}),
  ${misc:Depends}
 Description: MPEG layer 1/2/3 audio decoder (development files)
  mpg123 is a real time MPEG 1.0/2.0/2.5 audio player/decoder for layers

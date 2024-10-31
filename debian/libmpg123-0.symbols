@@ -1,4 +1,4 @@
-libmpg123.so.0 libmpg123-0t64 #MINVER#
+libmpg123.so.0 libmpg123-0 #MINVER#
  mpg123_add_string@Base 1.6.2
  mpg123_add_substring@Base 1.6.2
  mpg123_chomp_string@Base 1.15.1
@@ -135,5 +135,5 @@ libmpg123.so.0 libmpg123-0t64 #MINVER#
  mpg123_volume@Base 1.6.2
  mpg123_volume_change@Base 1.6.2
  mpg123_volume_change_db@Base 1.30.0
-(arch=i386 hurd-i386)#include "libmpg123-0t64.symbols.32bit.in"
-(arch=!armel !armhf !hppa !mipsel !powerpc !m68k !sh4 !x32)#include "libmpg123-0t64.symbols.t64.in"
+(arch=i386 hurd-i386)#include "libmpg123-0.symbols.32bit.in"
+(arch=!armel !armhf !hppa !mipsel !powerpc !m68k !sh4 !x32)#include "libmpg123-0.symbols"
