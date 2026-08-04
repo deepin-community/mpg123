@@ -1,1 +1,3 @@
 0001-Disable-function-mpg123_noise.patch
+0002-libmpg123-not-modifying-raw-ID3v2-tag-data-anymore-f.patch
+0003-libmpg123-fix-store_id3_text-to-prepend-encoding-for.patch

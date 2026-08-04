@@ -1,4 +1,4 @@
-libout123.so.0 libout123-0 #MINVER#
+libout123.so.0 libout123-0t64 #MINVER#
  out123_buffered@Base 1.23.8
  out123_close@Base 1.23.8
  out123_continue@Base 1.23.8
