@@ -1,0 +1,39 @@
+From: thor <thor@35dc7657-300d-0410-a2e5-dc2837fedb53>
+Date: Thu, 31 Jul 2025 19:56:03 +0000
+Subject: libmpg123: fix store_id3_text() to prepend encoding for
+ MPG123_PLAIN_ID3TEXT
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+… fixing the regression introduced by the fix for bug 279.
+
+git-svn-id: svn://scm.orgis.org/mpg123/trunk@5520 35dc7657-300d-0410-a2e5-dc2837fedb53
+---
+ src/libmpg123/id3.c | 9 +++++----
+ 1 file changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/src/libmpg123/id3.c b/src/libmpg123/id3.c
+index 20eaa9c..cb73bd5 100644
+--- a/src/libmpg123/id3.c
++++ b/src/libmpg123/id3.c
+@@ -345,14 +345,15 @@ static void store_id3_text(mpg123_string *sb, unsigned char encoding, unsigned c
+ 	if(notranslate)
+ 	{
+ 		/* Future: Add a path for ID3 errors. */
+-		if(!mpg123_grow_string(sb, source_size))
++		if(!mpg123_grow_string(sb, source_size+1))
+ 		{
+ 			if(noquiet) error("Cannot resize target string, out of memory?");
+ 			return;
+ 		}
+-		memcpy(sb->p, source, source_size);
+-		sb->fill = source_size;
+-		debug1("stored undecoded ID3 text of size %zu", source_size);
++		sb->p[0] = (char)encoding;
++		memcpy(sb->p+1, source, source_size);
++		sb->fill = source_size+1;
++		debug1("stored undecoded ID3 text of size %zu", source_size+1);
+ 		return;
+ 	}
+ 

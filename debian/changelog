@@ -1,8 +1,28 @@
-mpg123 (1.32.8-1deepin1) unstable; urgency=medium
+mpg123 (1.32.10-1+deb13u1) trixie; urgency=medium
 
-  * revert t64 patch.
+  * debian/gbp.conf: Switch to trixie branch
+  * debian/patches: Do not modify raw ID3v2 data while parsing (Closes:
+    #1129616)
 
- -- lichenggang <lichenggang@deepin.org>  Thu, 31 Oct 2024 10:26:50 +0800
+ -- Sebastian Ramacher <sramacher@debian.org>  Wed, 04 Mar 2026 21:10:27 +0100
+
+mpg123 (1.32.10-1) unstable; urgency=medium
+
+  [ Bastien Roucariès ]
+  * Add salsa-ci
+
+  [ Sebastian Ramacher ]
+  * New upstream version 1.32.10
+    - Use strtok_r for multi-threaded use (Closes: #1089543)
+
+ -- Sebastian Ramacher <sramacher@debian.org>  Sun, 22 Dec 2024 23:07:30 +0100
+
+mpg123 (1.32.9-1) unstable; urgency=medium
+
+  * New upstream release
+    Fixes: CVE-2024-10573, Closes: #1086443
+
+ -- Reinhard Tartler <siretart@tauware.de>  Mon, 11 Nov 2024 06:46:18 -0500
 
 mpg123 (1.32.8-1) unstable; urgency=medium
 
